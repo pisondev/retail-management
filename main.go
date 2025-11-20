@@ -40,6 +40,10 @@ func main() {
 	categoryService := service.NewCategoryService(categoryRepository, db, validate, logger)
 	categoryController := controller.NewCategoryController(categoryService, logger)
 
+	supplierRepository := repository.NewSupplierRepository(logger)
+	supplierService := service.NewSupplierService(supplierRepository, db, validate, logger)
+	supplierController := controller.NewSupplierController(supplierService, logger)
+
 	server := fiber.New(fiber.Config{
 		ErrorHandler: exception.ErrorHandler,
 	})
@@ -49,6 +53,7 @@ func main() {
 		UserController:     userController,
 		RoleController:     roleController,
 		CategoryController: categoryController,
+		SupplierController: supplierController,
 	}
 	routeConfig.Setup()
 

@@ -12,6 +12,7 @@ type RouteConfig struct {
 	UserController     controller.UserController
 	RoleController     controller.RoleController
 	CategoryController controller.CategoryController
+	SupplierController controller.SupplierController
 }
 
 func (c *RouteConfig) Setup() {
@@ -34,4 +35,11 @@ func (c *RouteConfig) Setup() {
 	categoryRoutes.Get("", c.CategoryController.FindAll)
 	categoryRoutes.Put("/:categoryID", c.CategoryController.Update)
 	categoryRoutes.Delete("/:categoryID", c.CategoryController.Delete)
+
+	// suppliers
+	supplierRoutes := c.App.Group("/suppliers", middleware.AuthMiddleware())
+	supplierRoutes.Post("", c.SupplierController.Save)
+	supplierRoutes.Get("", c.SupplierController.FindAll)
+	supplierRoutes.Patch("/:supplierID", c.SupplierController.Update)
+	supplierRoutes.Delete("/:supplierID", c.SupplierController.Delete)
 }
