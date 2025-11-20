@@ -57,4 +57,10 @@ func (c *RouteConfig) Setup() {
 
 	// inventory
 	c.App.Post("/inventory/adjust", middleware.AuthMiddleware(), middleware.AdminMiddleware(), c.InventoryLogController.Adjust)
+
+	// transactions
+	transactionRoutes := c.App.Group("/transactions", middleware.AuthMiddleware())
+	transactionRoutes.Post("", c.TransactionController.Create)
+	transactionRoutes.Get("", c.TransactionController.FindAll)
+	transactionRoutes.Get("/:transactionID", c.TransactionController.FindByID)
 }

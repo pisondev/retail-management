@@ -52,6 +52,10 @@ func main() {
 	inventoryLogService := service.NewInventoryLogService(inventoryLogRepository, productRepository, db, validate, logger)
 	inventoryLogController := controller.NewInventoryLogController(inventoryLogService, logger)
 
+	transactionRepository := repository.NewTransactionRepository(logger)
+	transactionService := service.NewTransactionService(transactionRepository, productRepository, db, validate, logger)
+	transactionController := controller.NewTransactionController(transactionService, logger)
+
 	server := fiber.New(fiber.Config{
 		ErrorHandler: exception.ErrorHandler,
 	})
@@ -64,6 +68,7 @@ func main() {
 		SupplierController:     supplierController,
 		ProductController:      productController,
 		InventoryLogController: inventoryLogController,
+		TransactionController:  transactionController,
 	}
 	routeConfig.Setup()
 
