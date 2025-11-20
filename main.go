@@ -48,17 +48,22 @@ func main() {
 	productService := service.NewProductService(productRepository, db, validate, logger)
 	productController := controller.NewProductController(productService, logger)
 
+	inventoryLogRepository := repository.NewInventoryLogRepository(logger)
+	inventoryLogService := service.NewInventoryLogService(inventoryLogRepository, productRepository, db, validate, logger)
+	inventoryLogController := controller.NewInventoryLogController(inventoryLogService, logger)
+
 	server := fiber.New(fiber.Config{
 		ErrorHandler: exception.ErrorHandler,
 	})
 
 	routeConfig := app.RouteConfig{
-		App:                server,
-		UserController:     userController,
-		RoleController:     roleController,
-		CategoryController: categoryController,
-		SupplierController: supplierController,
-		ProductController:  productController,
+		App:                    server,
+		UserController:         userController,
+		RoleController:         roleController,
+		CategoryController:     categoryController,
+		SupplierController:     supplierController,
+		ProductController:      productController,
+		InventoryLogController: inventoryLogController,
 	}
 	routeConfig.Setup()
 

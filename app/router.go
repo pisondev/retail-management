@@ -8,12 +8,13 @@ import (
 )
 
 type RouteConfig struct {
-	App                *fiber.App
-	UserController     controller.UserController
-	RoleController     controller.RoleController
-	CategoryController controller.CategoryController
-	SupplierController controller.SupplierController
-	ProductController  controller.ProductController
+	App                    *fiber.App
+	UserController         controller.UserController
+	RoleController         controller.RoleController
+	CategoryController     controller.CategoryController
+	SupplierController     controller.SupplierController
+	ProductController      controller.ProductController
+	InventoryLogController controller.InventoryLogController
 }
 
 func (c *RouteConfig) Setup() {
@@ -52,4 +53,7 @@ func (c *RouteConfig) Setup() {
 	productRoutes.Patch("/:productID", c.ProductController.Update)
 	productRoutes.Put("/:productID", c.ProductController.UpdateStock)
 	productRoutes.Delete("/:productID", c.ProductController.Delete)
+
+	// inventory
+	c.App.Post("/inventory/adjust", middleware.AuthMiddleware(), c.InventoryLogController.Adjust)
 }
