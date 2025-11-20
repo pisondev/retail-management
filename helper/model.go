@@ -43,3 +43,19 @@ func ToRoleResponses(roles []domain.Role) []web.RoleResponse {
 	}
 	return roleResponses
 }
+
+func ToCategoryResponse(category domain.Category) web.CategoryResponse {
+	return web.CategoryResponse{
+		CategoryID:   category.CategoryID,
+		CategoryName: category.CategoryName,
+	}
+}
+
+func ToCategoryResponses(categories []domain.Category) []web.CategoryResponse {
+	categoryResponses := make([]web.CategoryResponse, 0)
+
+	for _, category := range categories {
+		categoryResponses = append(categoryResponses, ToCategoryResponse(category))
+	}
+	return categoryResponses
+}
