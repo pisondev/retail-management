@@ -14,4 +14,5 @@ type UserLoginResponse struct {
 type UserResponse struct {
 	UserID   ulid.ULID `json:"user_id"`
 	Username string    `json:"username"`
+	Role     string    `json:"role"`
 }
