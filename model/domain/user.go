@@ -6,4 +6,5 @@ type User struct {
 	UserID         ulid.ULID
 	Username       string
 	HashedPassword string
+	Role           string
 }

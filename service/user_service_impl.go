@@ -55,7 +55,7 @@ func (service *UserServiceImpl) Login(ctx context.Context, req web.UserAuthReque
 		if errRollback != nil {
 			return web.UserLoginResponse{}, errRollback
 		}
-		return web.UserLoginResponse{}, exception.ErrUnauthorizedLogin
+		return web.UserLoginResponse{}, err
 	}
 
 	service.Logger.Infof("-trying to hash the password...")
@@ -71,7 +71,9 @@ func (service *UserServiceImpl) Login(ctx context.Context, req web.UserAuthReque
 	service.Logger.Infof("-creating jwt claims...")
 	claims := web.JWTClaims{
 		UserID: foundUser.UserID.String(),
+		Role:   foundUser.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   foundUser.UserID.String(),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
@@ -117,18 +119,20 @@ func (service *UserServiceImpl) FindByID(ctx context.Context, userID ulid.ULID) 
 		if errRollback != nil {
 			return web.UserResponse{}, errRollback
 		}
-		if err == sql.ErrNoRows {
+		if err == sql.ErrNoRows || errors.Is(err, exception.ErrNotFound) {
 			service.Logger.Warn("-user with specific user_id doesn't exists")
-			return web.UserResponse{}, sql.ErrNoRows
+			return web.UserResponse{}, exception.ErrNotFound
 		}
 		service.Logger.Errorf("-failed to execute r.FindByID: %v", err)
 		return web.UserResponse{}, err
 	}
 
 	service.Logger.Infof("found a user with username: %v", foundUser.Username)
+
 	return web.UserResponse{
 		UserID:   foundUser.UserID,
 		Username: foundUser.Username,
+		Role:     foundUser.Role,
 	}, nil
 }
 
@@ -146,7 +150,8 @@ func (service *UserServiceImpl) Register(ctx context.Context, req web.UserAuthRe
 
 	service.Logger.Infof("-executing repository.FindByUsername...")
 	_, err = service.UserRepository.FindByUsername(ctx, tx, req.Username)
-	if err != nil && err != sql.ErrNoRows {
+
+	if err != nil && !errors.Is(err, exception.ErrUnauthorizedLogin) && err != sql.ErrNoRows {
 		service.Logger.Errorf("-failed to execute r.FindByUsername: %v", err)
 		errRollback := tx.Rollback()
 		if errRollback != nil {
@@ -160,7 +165,7 @@ func (service *UserServiceImpl) Register(ctx context.Context, req web.UserAuthRe
 		if errRollback != nil {
 			return web.UserRegisterResponse{}, errRollback
 		}
-		return web.UserRegisterResponse{}, errors.New("-username already exists")
+		return web.UserRegisterResponse{}, exception.ErrConflict
 	}
 
 	service.Logger.Infof("-implementing ulid...")
@@ -225,7 +230,16 @@ func (service *UserServiceImpl) FindAll(ctx context.Context) ([]web.UserResponse
 		return []web.UserResponse{}, err
 	}
 
-	return helper.ToUserResponses(foundUsers), nil
+	var responses []web.UserResponse
+	for _, u := range foundUsers {
+		responses = append(responses, web.UserResponse{
+			UserID:   u.UserID,
+			Username: u.Username,
+			Role:     u.Role,
+		})
+	}
+
+	return responses, nil
 }
 
 func (service *UserServiceImpl) Update(ctx context.Context, req web.UserUpdateRequest) (web.UserResponse, error) {
@@ -247,9 +261,9 @@ func (service *UserServiceImpl) Update(ctx context.Context, req web.UserUpdateRe
 		if errRollback != nil {
 			return web.UserResponse{}, errRollback
 		}
-		if err == sql.ErrNoRows {
+		if err == sql.ErrNoRows || errors.Is(err, exception.ErrNotFound) {
 			service.Logger.Warn("-user with specific user_id doesn't exists")
-			return web.UserResponse{}, sql.ErrNoRows
+			return web.UserResponse{}, exception.ErrNotFound
 		}
 		service.Logger.Errorf("-failed to execute r.FindByID: %v", err)
 		return web.UserResponse{}, err
@@ -264,7 +278,7 @@ func (service *UserServiceImpl) Update(ctx context.Context, req web.UserUpdateRe
 		}
 
 		service.Logger.Info("-trying to execute r.Update...")
-		updatedTask, err := service.UserRepository.Update(ctx, tx, selectedUser)
+		updatedUser, err := service.UserRepository.Update(ctx, tx, selectedUser)
 		if err != nil {
 			service.Logger.Errorf("-failed to update a user: %v", err)
 			errRollback := tx.Rollback()
@@ -281,7 +295,12 @@ func (service *UserServiceImpl) Update(ctx context.Context, req web.UserUpdateRe
 		}
 
 		service.Logger.Info("-successfully commit tx, returning back to controller...")
-		return helper.ToUserResponse(updatedTask), nil
+
+		return web.UserResponse{
+			UserID:   updatedUser.UserID,
+			Username: updatedUser.Username,
+			Role:     updatedUser.Role,
+		}, nil
 	}
 
 	service.Logger.Info("-trying to commit tx...")
@@ -291,7 +310,12 @@ func (service *UserServiceImpl) Update(ctx context.Context, req web.UserUpdateRe
 	}
 
 	service.Logger.Info("-successfully commit tx, returning back to controller...")
-	return helper.ToUserResponse(selectedUser), nil
+
+	return web.UserResponse{
+		UserID:   selectedUser.UserID,
+		Username: selectedUser.Username,
+		Role:     selectedUser.Role,
+	}, nil
 }
 
 func (service *UserServiceImpl) Delete(ctx context.Context, userID ulid.ULID) error {
@@ -307,6 +331,11 @@ func (service *UserServiceImpl) Delete(ctx context.Context, userID ulid.ULID) er
 		errRollback := tx.Rollback()
 		if errRollback != nil {
 			return errRollback
+		}
+
+		if errors.Is(err, exception.ErrNotFound) {
+			service.Logger.Warnf("-user not found for delete: %v", userID)
+			return exception.ErrNotFound
 		}
 
 		service.Logger.Errorf("-failed to execute r.Delete: %v", err)

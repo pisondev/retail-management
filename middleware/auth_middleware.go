@@ -38,6 +38,7 @@ func AuthMiddleware() fiber.Handler {
 		}
 
 		ctx.Locals("userID", claims.UserID)
+		ctx.Locals("role", claims.Role)
 
 		return ctx.Next()
 	}

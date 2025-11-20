@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"errors"
+	"retail-management/exception"
 	"retail-management/model/domain"
 
 	"github.com/oklog/ulid/v2"
@@ -34,30 +34,52 @@ func (repository *UserRepositoryImpl) Save(ctx context.Context, tx *sql.Tx, user
 }
 
 func (repository *UserRepositoryImpl) FindByID(ctx context.Context, tx *sql.Tx, userID ulid.ULID) (domain.User, error) {
-	SQL := "SELECT user_id, username FROM Users WHERE user_id = ?"
+	SQL := `
+        SELECT 
+            u.user_id, 
+            u.username, 
+            r.role_name
+        FROM Users u
+        JOIN User_Roles ur ON u.user_id = ur.user_id
+        JOIN Roles r ON ur.role_id = r.role_id
+        WHERE u.user_id = ?
+    `
 
 	var user domain.User
 
-	repository.Logger.Info("---executing sql (select by id)...")
+	repository.Logger.Info("---executing sql (select by id with role)...")
 	err := tx.QueryRowContext(ctx, SQL, userID).Scan(
 		&user.UserID,
 		&user.Username,
+		&user.Role,
 	)
+
 	if err != nil {
-		if err != sql.ErrNoRows {
-			repository.Logger.Warn("---cannot found user_id")
+		if err == sql.ErrNoRows {
+			repository.Logger.Warnf("---user not found by id: %v", userID)
+			return domain.User{}, exception.ErrNotFound
 		} else {
 			repository.Logger.Errorf("---failed to scan row: %v", err)
+			return domain.User{}, err
 		}
-		return domain.User{}, err
 	}
 
 	return user, nil
 }
 
 func (repository *UserRepositoryImpl) FindByUsername(ctx context.Context, tx *sql.Tx, username string) (domain.User, error) {
-	SQL := "SELECT user_id, username, hashed_password FROM Users WHERE username = ?"
-
+	// Method ini sudah BENAR (sudah ada JOIN)
+	SQL := `
+        SELECT 
+            u.user_id, 
+            u.username, 
+            u.hashed_password, 
+            r.role_name
+        FROM Users u
+        JOIN User_Roles ur ON u.user_id = ur.user_id
+        JOIN Roles r ON ur.role_id = r.role_id
+        WHERE u.username = ?
+    `
 	var user domain.User
 
 	repository.Logger.Infof("---executing sql (select by username)...")
@@ -65,25 +87,35 @@ func (repository *UserRepositoryImpl) FindByUsername(ctx context.Context, tx *sq
 		&user.UserID,
 		&user.Username,
 		&user.HashedPassword,
+		&user.Role,
 	)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
 			repository.Logger.Warnf("---cannot found username: %v", username)
+			return domain.User{}, exception.ErrUnauthorizedLogin // Gunakan error spesifik untuk login
 		} else {
 			repository.Logger.Errorf("---failed to scan row: %v", err)
+			return domain.User{}, err
 		}
-
-		return domain.User{}, err
 	}
 
 	return user, nil
 }
 
 func (repository *UserRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx) ([]domain.User, error) {
-	SQL := "SELECT user_id, username FROM Users ORDER BY user_id ASC"
+	SQL := `
+        SELECT 
+            u.user_id, 
+            u.username,
+            r.role_name
+        FROM Users u
+        JOIN User_Roles ur ON u.user_id = ur.user_id
+        JOIN Roles r ON ur.role_id = r.role_id
+        ORDER BY u.username ASC
+    `
 
-	repository.Logger.Info("---executing sql (select all)...")
+	repository.Logger.Info("---executing sql (select all users with roles)...")
 	rows, err := tx.QueryContext(ctx, SQL)
 	if err != nil {
 		return []domain.User{}, err
@@ -92,11 +124,13 @@ func (repository *UserRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx) (
 
 	repository.Logger.Info("---initializing users slice...")
 	users := make([]domain.User, 0)
+
 	for rows.Next() {
 		user := domain.User{}
 		err := rows.Scan(
 			&user.UserID,
 			&user.Username,
+			&user.Role,
 		)
 		if err != nil {
 			repository.Logger.Errorf("---failed to scan row: %v", err)
@@ -104,8 +138,6 @@ func (repository *UserRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx) (
 		}
 		users = append(users, user)
 	}
-	repository.Logger.Infof("---users result: %v", users)
-	repository.Logger.Info("---all rows has been scanned. returning back to service layer...")
 
 	return users, nil
 }
@@ -120,19 +152,7 @@ func (repository *UserRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, us
 		return domain.User{}, err
 	}
 
-	repository.Logger.Info("successfully updated a user. trying to select...")
-	SQLSelect := "SELECT user_id, username FROM Users WHERE user_id = ?"
-	err = tx.QueryRowContext(ctx, SQLSelect, user.UserID).Scan(
-		&user.UserID,
-		&user.Username,
-	)
-	if err != nil {
-		repository.Logger.Errorf("failed to scan a user: %v", err)
-		return domain.User{}, err
-	}
-
-	repository.Logger.Info("successfully scan a user, returning back to service layer...")
-	return user, nil
+	return repository.FindByID(ctx, tx, user.UserID)
 }
 
 func (repository *UserRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, userID ulid.ULID) error {
@@ -153,7 +173,7 @@ func (repository *UserRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, us
 
 	if rowsAffected == 0 {
 		repository.Logger.Warnf("---failed to delete, user not found: %v", userID)
-		return errors.New("cannot found user")
+		return exception.ErrNotFound
 	}
 
 	return nil
