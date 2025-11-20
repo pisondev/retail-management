@@ -119,3 +119,14 @@ func ToProductUpdateResponses(products []domain.ProductUpdate) []web.ProductUpda
 	}
 	return productResponses
 }
+
+func ToInventoryLogResponse(inventoryLog domain.InventoryLog) web.InventoryLogResponse {
+	return web.InventoryLogResponse{
+		LogID:          inventoryLog.LogID,
+		ProductID:      inventoryLog.ProductID,
+		UserID:         inventoryLog.UserID,
+		ChangeQuantity: inventoryLog.ChangeQuantity,
+		Reason:         inventoryLog.Reason,
+		CreatedAt:      inventoryLog.CreatedAt,
+	}
+}
