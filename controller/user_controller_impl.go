@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"errors"
+	"retail-management/exception"
 	"retail-management/model/web"
 	"retail-management/service"
 
@@ -27,12 +29,7 @@ func (controller *UserControllerImpl) Login(ctx *fiber.Ctx) error {
 	controller.Logger.Info("trying to parse body json...")
 	err := ctx.BodyParser(&userAuthRequest)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   fiber.StatusBadRequest,
-			Status: "BAD REQUEST",
-			Data:   err.Error(),
-		}
-		return ctx.Status(fiber.StatusBadRequest).JSON(webResponse)
+		return err
 	}
 
 	controller.Logger.Info("executing userService.Login...")
@@ -49,7 +46,18 @@ func (controller *UserControllerImpl) Login(ctx *fiber.Ctx) error {
 
 func (controller *UserControllerImpl) GetMe(ctx *fiber.Ctx) error {
 	controller.Logger.Info("trying to get userID from middleware...")
-	userIDString := ctx.Locals("userID").(string)
+
+	userIDRaw := ctx.Locals("userID")
+	if userIDRaw == nil {
+		controller.Logger.Error("missing user info in context")
+		return exception.ErrUnauthorized
+	}
+
+	userIDString, ok := userIDRaw.(string)
+	if !ok {
+		controller.Logger.Error("userID in context is not a string")
+		return errors.New("internal error: invalid user id type")
+	}
 
 	userID, err := ulid.Parse(userIDString)
 	if err != nil {
@@ -60,12 +68,7 @@ func (controller *UserControllerImpl) GetMe(ctx *fiber.Ctx) error {
 	controller.Logger.Info("executing userService.FindByID...")
 	user, err := controller.UserService.FindByID(ctx.Context(), userID)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   fiber.StatusNotFound,
-			Status: "NOT FOUND",
-			Data:   err,
-		}
-		return ctx.Status(fiber.StatusNotFound).JSON(webResponse)
+		return err
 	}
 
 	controller.Logger.Info("returning the http response...")
@@ -80,12 +83,7 @@ func (controller *UserControllerImpl) Register(ctx *fiber.Ctx) error {
 	controller.Logger.Info("trying to parse body json...")
 	err := ctx.BodyParser(&userAuthReq)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   fiber.StatusBadRequest,
-			Status: "BAD REQUEST",
-			Data:   err.Error(),
-		}
-		return ctx.Status(fiber.StatusBadRequest).JSON(webResponse)
+		return err
 	}
 
 	controller.Logger.Info("executing userService.Register...")
@@ -104,7 +102,7 @@ func (controller *UserControllerImpl) FindAll(ctx *fiber.Ctx) error {
 	controller.Logger.Info("executing userService.FindAll...")
 	users, err := controller.UserService.FindAll(ctx.Context())
 	if err != nil {
-		controller.Logger.Errorf("failed to failed to execute userService.FindAll")
+		controller.Logger.Errorf("failed to failed to execute userService.FindAll: %v", err)
 		return err
 	}
 
@@ -125,12 +123,7 @@ func (controller *UserControllerImpl) FindByID(ctx *fiber.Ctx) error {
 	user, err := controller.UserService.FindByID(ctx.Context(), userID)
 	if err != nil {
 		controller.Logger.Errorf("failed to execute UserService.FindByID: %v", err)
-		webResponse := web.WebResponse{
-			Code:   fiber.StatusNotFound,
-			Status: "NOT FOUND",
-			Data:   err,
-		}
-		return ctx.Status(fiber.StatusNotFound).JSON(webResponse)
+		return err
 	}
 	controller.Logger.Info("---------SUCCESFULLY FIND USER BY ID---------")
 	return ctx.Status(fiber.StatusOK).JSON(user)
@@ -152,12 +145,7 @@ func (controller *UserControllerImpl) Update(ctx *fiber.Ctx) error {
 	controller.Logger.Info("trying to parse body json...")
 	err = ctx.BodyParser(&userUpdateRequest)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   fiber.StatusBadRequest,
-			Status: "BAD REQUEST",
-			Data:   err.Error(),
-		}
-		return ctx.Status(fiber.StatusBadRequest).JSON(webResponse)
+		return err
 	}
 
 	controller.Logger.Info("executing UserService.Update...")
