@@ -11,33 +11,43 @@ import (
 func ErrorHandler(ctx *fiber.Ctx, err error) error {
 	var validationErr validator.ValidationErrors
 
-	// default: 500
 	code := fiber.StatusInternalServerError
 	status := "INTERNAL SERVER ERROR"
 
-	//400
+	// 400 Bad Request
 	if errors.As(err, &validationErr) {
 		code = fiber.StatusBadRequest
 		status = "BAD REQUEST"
 	}
+	if errors.Is(err, ErrInsufficientStock) {
+		code = fiber.StatusBadRequest
+		status = "BAD REQUEST"
+	}
 
-	//401
-	if errors.Is(err, ErrUnauthorized) {
+	// 401 Unauthorized
+	if errors.Is(err, ErrUnauthorized) || errors.Is(err, ErrUnauthorizedLogin) {
 		code = fiber.StatusUnauthorized
 		status = "UNAUTHORIZED"
 	}
-	if errors.Is(err, ErrUnauthorizedLogin) {
-		code = fiber.StatusUnauthorized
-		status = "UNAUTHORIZED"
+
+	// 403 Forbidden
+	if errors.Is(err, ErrForbidden) {
+		code = fiber.StatusForbidden
+		status = "FORBIDDEN"
 	}
 
-	//409
+	// 404 Not Found
+	if errors.Is(err, ErrNotFound) {
+		code = fiber.StatusNotFound
+		status = "NOT FOUND"
+	}
+
+	// 409 Conflict
 	if errors.Is(err, ErrConflict) {
 		code = fiber.StatusConflict
 		status = "CONFLICT"
 	}
 
-	// create web response
 	webResponse := web.WebResponse{
 		Code:   code,
 		Status: status,
