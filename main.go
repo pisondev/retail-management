@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 )
@@ -24,6 +25,7 @@ func main() {
 	}
 
 	serverPort := os.Getenv("SERVER_PORT")
+	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
 
 	db := app.NewDB()
 	validate := validator.New()
@@ -59,6 +61,13 @@ func main() {
 	server := fiber.New(fiber.Config{
 		ErrorHandler: exception.ErrorHandler,
 	})
+
+	server.Use(cors.New(cors.Config{
+		AllowOrigins:     allowedOrigin,
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowMethods:     "GET, POST, PUT, PATCH, DELETE",
+		AllowCredentials: true,
+	}))
 
 	routeConfig := app.RouteConfig{
 		App:                    server,
