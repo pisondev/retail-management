@@ -130,3 +130,39 @@ func ToInventoryLogResponse(inventoryLog domain.InventoryLog) web.InventoryLogRe
 		CreatedAt:      inventoryLog.CreatedAt,
 	}
 }
+
+func ToTransactionItemResponse(detail domain.TransactionDetailWithProduct) web.TransactionItemResp {
+	return web.TransactionItemResp{
+		ProductID:   detail.ProductID,
+		ProductName: detail.ProductName,
+		Quantity:    detail.Quantity,
+		Price:       detail.PriceAtSale,
+		SubTotal:    detail.SubTotal,
+	}
+}
+
+func ToTransactionItemResponses(details []domain.TransactionDetailWithProduct) []web.TransactionItemResp {
+	var responses []web.TransactionItemResp
+	for _, detail := range details {
+		responses = append(responses, ToTransactionItemResponse(detail))
+	}
+	return responses
+}
+
+func ToTransactionResponse(transaction domain.TransactionWithTotal, items []web.TransactionItemResp) web.TransactionResponse {
+	return web.TransactionResponse{
+		TransactionID: transaction.TransactionID,
+		UserID:        transaction.UserID,
+		TotalAmount:   transaction.TotalAmount,
+		CreatedAt:     transaction.CreatedAt,
+		Items:         items,
+	}
+}
+
+func ToTransactionResponses(transactions []domain.TransactionWithTotal) []web.TransactionResponse {
+	var responses []web.TransactionResponse
+	for _, trx := range transactions {
+		responses = append(responses, ToTransactionResponse(trx, nil))
+	}
+	return responses
+}
