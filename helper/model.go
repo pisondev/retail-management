@@ -59,3 +59,21 @@ func ToCategoryResponses(categories []domain.Category) []web.CategoryResponse {
 	}
 	return categoryResponses
 }
+
+func ToSupplierResponse(supplier domain.Supplier) web.SupplierResponse {
+	return web.SupplierResponse{
+		SupplierID:   supplier.SupplierID,
+		SupplierName: supplier.SupplierName,
+		PhoneNumber:  supplier.PhoneNumber,
+		Email:        supplier.Email,
+	}
+}
+
+func ToSupplierResponses(suppliers []domain.Supplier) []web.SupplierResponse {
+	supplierResponses := make([]web.SupplierResponse, 0)
+
+	for _, supplier := range suppliers {
+		supplierResponses = append(supplierResponses, ToSupplierResponse(supplier))
+	}
+	return supplierResponses
+}
