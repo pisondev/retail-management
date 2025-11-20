@@ -77,3 +77,45 @@ func ToSupplierResponses(suppliers []domain.Supplier) []web.SupplierResponse {
 	}
 	return supplierResponses
 }
+
+func ToProductResponse(product domain.Product) web.ProductResponse {
+	return web.ProductResponse{
+		ProductID:     product.ProductID,
+		ProductName:   product.ProductName,
+		PurchasePrice: product.PurchasePrice,
+		SellingPrice:  product.SellingPrice,
+		StockQuantity: product.StockQuantity,
+		CategoryID:    product.CategoryID,
+		SupplierID:    product.SupplierID,
+	}
+}
+
+func ToProductResponses(products []domain.Product) []web.ProductResponse {
+	productResponses := make([]web.ProductResponse, 0)
+
+	for _, product := range products {
+		productResponses = append(productResponses, ToProductResponse(product))
+	}
+	return productResponses
+}
+
+func ToProductUpdateResponse(product domain.ProductUpdate) web.ProductUpdateResponse {
+	return web.ProductUpdateResponse{
+		ProductID:     product.ProductID,
+		ProductName:   product.ProductName,
+		PurchasePrice: product.PurchasePrice,
+		SellingPrice:  product.SellingPrice,
+		StockQuantity: product.StockQuantity,
+		CategoryID:    product.CategoryID,
+		SupplierID:    product.SupplierID,
+	}
+}
+
+func ToProductUpdateResponses(products []domain.ProductUpdate) []web.ProductUpdateResponse {
+	productResponses := make([]web.ProductUpdateResponse, 0)
+
+	for _, product := range products {
+		productResponses = append(productResponses, ToProductUpdateResponse(product))
+	}
+	return productResponses
+}
