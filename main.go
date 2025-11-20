@@ -36,14 +36,19 @@ func main() {
 	roleService := service.NewRoleService(roleRepository, db, validate, logger)
 	roleController := controller.NewRoleController(roleService, logger)
 
+	categoryRepository := repository.NewCategoryRepository(logger)
+	categoryService := service.NewCategoryService(categoryRepository, db, validate, logger)
+	categoryController := controller.NewCategoryController(categoryService, logger)
+
 	server := fiber.New(fiber.Config{
 		ErrorHandler: exception.ErrorHandler,
 	})
 
 	routeConfig := app.RouteConfig{
-		App:            server,
-		UserController: userController,
-		RoleController: roleController,
+		App:                server,
+		UserController:     userController,
+		RoleController:     roleController,
+		CategoryController: categoryController,
 	}
 	routeConfig.Setup()
 

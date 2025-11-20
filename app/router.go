@@ -8,9 +8,10 @@ import (
 )
 
 type RouteConfig struct {
-	App            *fiber.App
-	UserController controller.UserController
-	RoleController controller.RoleController
+	App                *fiber.App
+	UserController     controller.UserController
+	RoleController     controller.RoleController
+	CategoryController controller.CategoryController
 }
 
 func (c *RouteConfig) Setup() {
@@ -26,4 +27,11 @@ func (c *RouteConfig) Setup() {
 	userRoutes.Patch("/:userID", c.UserController.Update)
 	userRoutes.Delete("/:userID", c.UserController.Delete)
 	c.App.Get("/roles", c.RoleController.FindAll)
+
+	// categories
+	categoryRoutes := c.App.Group("/categories", middleware.AuthMiddleware())
+	categoryRoutes.Post("", c.CategoryController.Create)
+	categoryRoutes.Get("", c.CategoryController.FindAll)
+	categoryRoutes.Put("/:categoryID", c.CategoryController.Update)
+	categoryRoutes.Delete("/:categoryID", c.CategoryController.Delete)
 }
