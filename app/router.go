@@ -15,6 +15,7 @@ type RouteConfig struct {
 	SupplierController     controller.SupplierController
 	ProductController      controller.ProductController
 	InventoryLogController controller.InventoryLogController
+	TransactionController  controller.TransactionController
 }
 
 func (c *RouteConfig) Setup() {
@@ -23,37 +24,37 @@ func (c *RouteConfig) Setup() {
 	c.App.Get("/auth/me", middleware.AuthMiddleware(), c.UserController.GetMe)
 
 	// user management
-	userRoutes := c.App.Group("/users", middleware.AuthMiddleware())
+	userRoutes := c.App.Group("/users", middleware.AuthMiddleware(), middleware.AdminMiddleware())
 	userRoutes.Post("", c.UserController.Register)
 	userRoutes.Get("", c.UserController.FindAll)
 	userRoutes.Get("/:userID", c.UserController.FindByID)
 	userRoutes.Patch("/:userID", c.UserController.Update)
 	userRoutes.Delete("/:userID", c.UserController.Delete)
-	c.App.Get("/roles", c.RoleController.FindAll)
+	c.App.Get("/roles", middleware.AuthMiddleware(), middleware.AdminMiddleware(), c.RoleController.FindAll)
 
 	// categories
 	categoryRoutes := c.App.Group("/categories", middleware.AuthMiddleware())
-	categoryRoutes.Post("", c.CategoryController.Create)
+	categoryRoutes.Post("", middleware.AdminMiddleware(), c.CategoryController.Create)
 	categoryRoutes.Get("", c.CategoryController.FindAll)
-	categoryRoutes.Put("/:categoryID", c.CategoryController.Update)
-	categoryRoutes.Delete("/:categoryID", c.CategoryController.Delete)
+	categoryRoutes.Put("/:categoryID", middleware.AdminMiddleware(), c.CategoryController.Update)
+	categoryRoutes.Delete("/:categoryID", middleware.AdminMiddleware(), c.CategoryController.Delete)
 
 	// suppliers
 	supplierRoutes := c.App.Group("/suppliers", middleware.AuthMiddleware())
-	supplierRoutes.Post("", c.SupplierController.Save)
+	supplierRoutes.Post("", middleware.AdminMiddleware(), c.SupplierController.Save)
 	supplierRoutes.Get("", c.SupplierController.FindAll)
-	supplierRoutes.Patch("/:supplierID", c.SupplierController.Update)
-	supplierRoutes.Delete("/:supplierID", c.SupplierController.Delete)
+	supplierRoutes.Patch("/:supplierID", middleware.AdminMiddleware(), c.SupplierController.Update)
+	supplierRoutes.Delete("/:supplierID", middleware.AdminMiddleware(), c.SupplierController.Delete)
 
 	// products
 	productRoutes := c.App.Group("/products", middleware.AuthMiddleware())
-	productRoutes.Post("", c.ProductController.Create)
+	productRoutes.Post("", middleware.AdminMiddleware(), c.ProductController.Create)
 	productRoutes.Get("", c.ProductController.FindAll)
 	productRoutes.Get("/:productID", c.ProductController.FindByID)
-	productRoutes.Patch("/:productID", c.ProductController.Update)
-	productRoutes.Put("/:productID", c.ProductController.UpdateStock)
-	productRoutes.Delete("/:productID", c.ProductController.Delete)
+	productRoutes.Patch("/:productID", middleware.AdminMiddleware(), c.ProductController.Update)
+	productRoutes.Put("/:productID", middleware.AdminMiddleware(), c.ProductController.UpdateStock)
+	productRoutes.Delete("/:productID", middleware.AdminMiddleware(), c.ProductController.Delete)
 
 	// inventory
-	c.App.Post("/inventory/adjust", middleware.AuthMiddleware(), c.InventoryLogController.Adjust)
+	c.App.Post("/inventory/adjust", middleware.AuthMiddleware(), middleware.AdminMiddleware(), c.InventoryLogController.Adjust)
 }
