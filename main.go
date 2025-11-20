@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"retail-management/exception"
 
 	_ "github.com/go-sql-driver/mysql"
 
@@ -19,7 +20,9 @@ func main() {
 
 	serverPort := os.Getenv("SERVER_PORT")
 
-	server := fiber.New(fiber.Config{})
+	server := fiber.New(fiber.Config{
+		ErrorHandler: exception.ErrorHandler,
+	})
 
 	err = server.Listen(serverPort)
 	if err != nil {
