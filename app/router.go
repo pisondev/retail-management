@@ -10,6 +10,7 @@ import (
 type RouteConfig struct {
 	App            *fiber.App
 	UserController controller.UserController
+	RoleController controller.RoleController
 }
 
 func (c *RouteConfig) Setup() {
@@ -24,4 +25,5 @@ func (c *RouteConfig) Setup() {
 	userRoutes.Get("/:userID", c.UserController.FindByID)
 	userRoutes.Patch("/:userID", c.UserController.Update)
 	userRoutes.Delete("/:userID", c.UserController.Delete)
+	c.App.Get("/roles", c.RoleController.FindAll)
 }
