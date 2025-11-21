@@ -7,10 +7,10 @@ import (
 )
 
 type InventoryLogResponse struct {
-	LogID          ulid.ULID
-	ProductID      ulid.ULID
-	UserID         ulid.ULID
-	ChangeQuantity int
-	Reason         *string
-	CreatedAt      time.Time
+	LogID          ulid.ULID `json:"log_id"`
+	ProductID      ulid.ULID `json:"product_id"`
+	UserID         ulid.ULID `json:"user_id"`
+	ChangeQuantity int       `json:"change_quantity"`
+	Reason         *string   `json:"reason"`
+	CreatedAt      time.Time `json:"created_at"`
 }

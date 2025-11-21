@@ -6,21 +6,21 @@ import (
 )
 
 type ProductResponse struct {
-	ProductID     ulid.ULID
-	ProductName   string
-	PurchasePrice decimal.Decimal
-	SellingPrice  decimal.Decimal
-	StockQuantity int
-	CategoryID    ulid.ULID
-	SupplierID    ulid.ULID
+	ProductID     ulid.ULID       `json:"product_id"`
+	ProductName   string          `json:"product_name"`
+	PurchasePrice decimal.Decimal `json:"purchase_price"`
+	SellingPrice  decimal.Decimal `json:"selling_price"`
+	StockQuantity int             `json:"stock_quantity"`
+	CategoryID    ulid.ULID       `json:"category_id"`
+	SupplierID    ulid.ULID       `json:"supplier_id"`
 }
 
 type ProductUpdateResponse struct {
-	ProductID     ulid.ULID
-	ProductName   *string
-	PurchasePrice *decimal.Decimal
-	SellingPrice  *decimal.Decimal
-	StockQuantity *int
-	CategoryID    *ulid.ULID
-	SupplierID    *ulid.ULID
+	ProductID     ulid.ULID        `json:"product_id"`
+	ProductName   *string          `json:"product_name"`
+	PurchasePrice *decimal.Decimal `json:"purchase_price"`
+	SellingPrice  *decimal.Decimal `json:"selling_price"`
+	StockQuantity *int             `json:"stock_quantity"`
+	CategoryID    *ulid.ULID       `json:"category_id"`
+	SupplierID    *ulid.ULID       `json:"supplier_id"`
 }
