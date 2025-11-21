@@ -1,0 +1,1445 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Small Business Inventory and Sales System API",
+    "description": "API Documentation for Small Business Inventory and Sales System API Project.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Server Pengembangan"
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "1. Authentication"
+        ],
+        "summary": "Login Pengguna",
+        "description": "Mengautentikasi pengguna (Admin/Kasir) dan mengembalikan JSON Web Token (JWT).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login berhasil, token JWT dikembalikan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "1. Authentication"
+        ],
+        "summary": "Dapatkan Profil Pengguna Saat Ini",
+        "description": "Mendapatkan detail pengguna yang sedang login berdasarkan token.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profil pengguna yang terautentikasi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/users": {
+      "post": {
+        "tags": [
+          "2. User Management"
+        ],
+        "summary": "(Admin) Buat Pengguna Baru",
+        "description": "Hanya Admin. Mendaftarkan pengguna baru (Admin atau Kasir).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pengguna berhasil dibuat.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "2. User Management"
+        ],
+        "summary": "(Admin) Dapatkan Semua Pengguna",
+        "description": "Hanya Admin. Mengambil daftar semua pengguna.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar semua pengguna.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "parameters": [
+        {
+          "name": "userId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "ulid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "2. User Management"
+        ],
+        "summary": "(Admin) Dapatkan Pengguna by ID",
+        "description": "Hanya Admin. Mengambil detail satu pengguna.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail pengguna.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "2. User Management"
+        ],
+        "summary": "(Admin) Update Pengguna",
+        "description": "Hanya Admin. Memperbarui username, password, atau role pengguna.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pengguna berhasil diperbarui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "2. User Management"
+        ],
+        "summary": "(Admin) Hapus Pengguna",
+        "description": "Hanya Admin. Menghapus pengguna dari sistem.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Pengguna berhasil dihapus (No Content)."
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/roles": {
+      "get": {
+        "tags": [
+          "2. User Management"
+        ],
+        "summary": "(Admin) Dapatkan Semua Role",
+        "description": "Hanya Admin. Mengambil daftar role yang tersedia (Admin, Kasir).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar semua role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Role"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/categories": {
+      "post": {
+        "tags": [
+          "3. Categories"
+        ],
+        "summary": "(Admin) Buat Kategori Baru",
+        "description": "Hanya Admin. Menambahkan kategori produk baru.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Kategori berhasil dibuat.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "3. Categories"
+        ],
+        "summary": "Dapatkan Semua Kategori",
+        "description": "Admin & Kasir. Mengambil daftar semua kategori produk.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar semua kategori.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/categories/{categoryId}": {
+      "parameters": [
+        {
+          "name": "categoryId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "ulid"
+          }
+        }
+      ],
+      "put": {
+        "tags": [
+          "3. Categories"
+        ],
+        "summary": "(Admin) Update Kategori",
+        "description": "Hanya Admin. Memperbarui nama kategori.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Kategori berhasil diperbarui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "3. Categories"
+        ],
+        "summary": "(Admin) Hapus Kategori",
+        "description": "Hanya Admin. Menghapus kategori.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Kategori berhasil dihapus (No Content)."
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/suppliers": {
+      "post": {
+        "tags": [
+          "4. Suppliers"
+        ],
+        "summary": "(Admin) Buat Supplier Baru",
+        "description": "Hanya Admin. Mendaftarkan supplier baru.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplierInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Supplier berhasil dibuat.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Supplier"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "4. Suppliers"
+        ],
+        "summary": "Dapatkan Semua Supplier",
+        "description": "Admin & Kasir. Mengambil daftar semua supplier.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar semua supplier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Supplier"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/suppliers/{supplierId}": {
+      "parameters": [
+        {
+          "name": "supplierId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "ulid"
+          }
+        }
+      ],
+      "put": {
+        "tags": [
+          "4. Suppliers"
+        ],
+        "summary": "(Admin) Update Supplier",
+        "description": "Hanya Admin. Memperbarui data supplier.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplierInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Supplier berhasil diperbarui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Supplier"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "4. Suppliers"
+        ],
+        "summary": "(Admin) Hapus Supplier",
+        "description": "Hanya Admin. Menghapus supplier.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Supplier berhasil dihapus (No Content)."
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/products": {
+      "post": {
+        "tags": [
+          "5. Products"
+        ],
+        "summary": "(Admin) Tambah Produk Baru",
+        "description": "Hanya Admin. Menambahkan produk baru ke database.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Produk berhasil dibuat.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "5. Products"
+        ],
+        "summary": "Dapatkan Semua Produk",
+        "description": "Admin & Kasir. Mengambil daftar semua produk. Kasir menggunakan ini untuk melihat ketersediaan stok.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar semua produk.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/products/{productId}": {
+      "parameters": [
+        {
+          "name": "productId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "ulid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "5. Products"
+        ],
+        "summary": "Dapatkan Produk by ID",
+        "description": "Admin & Kasir. Mengambil detail satu produk.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail produk.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "5. Products"
+        ],
+        "summary": "(Admin) Update Produk",
+        "description": "Hanya Admin. Memperbarui data produk.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductUpdateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Produk berhasil diperbarui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "5. Products"
+        ],
+        "summary": "(Admin) Hapus Produk",
+        "description": "Hanya Admin. Menghapus produk.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Produk berhasil dihapus (No Content)."
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/inventory/adjust": {
+      "post": {
+        "tags": [
+          "6. Inventory"
+        ],
+        "summary": "(Admin) Penyesuaian Stok Manual",
+        "description": "Hanya Admin. Menambah atau mengurangi stok secara manual (misal: stock opname, barang masuk).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryAdjustInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stok berhasil disesuaikan dan log dibuat.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLogResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kuantitas tidak valid atau produk tidak ditemukan."
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/transactions": {
+      "post": {
+        "tags": [
+          "7. Transactions"
+        ],
+        "summary": "(Kasir) Buat Transaksi Baru",
+        "description": "Hanya Kasir. Membuat catatan transaksi penjualan baru (keranjang belanja).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transaksi berhasil dibuat.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionDetailResponseData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Stok tidak mencukupi atau produk tidak valid."
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "7. Transactions"
+        ],
+        "summary": "Dapatkan Riwayat Transaksi",
+        "description": "Admin melihat semua, Kasir hanya melihat transaksi yang mereka lakukan. Output dibungkus dalam format code/status/data.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar riwayat transaksi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "status": { "type": "string", "example": "OK" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TransactionResponseData"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/transactions/{transactionId}": {
+      "parameters": [
+        {
+          "name": "transactionId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "ulid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "7. Transactions"
+        ],
+        "summary": "Dapatkan Detail Transaksi by ID",
+        "description": "Mendapatkan detail lengkap transaksi, termasuk item-itemnya. Output dibungkus dalam format code/status/data.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail transaksi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "status": { "type": "string", "example": "OK" },
+                    "data": {
+                      "$ref": "#/components/schemas/TransactionDetailResponseData"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "description": "Forbidden (jika Kasir mencoba melihat transaksi orang lain)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Role": {
+        "type": "object",
+        "properties": {
+          "role_id": {
+            "type": "integer",
+            "example": 1
+          },
+          "role_name": {
+            "type": "string",
+            "example": "admin"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01J3YH3YTGX5VYB4A5R8M7A6KQ"
+          },
+          "username": {
+            "type": "string",
+            "example": "admin"
+          },
+          "role": {
+            "type": "string",
+            "example": "admin"
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "category_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "category_name": {
+            "type": "string",
+            "example": "Minuman Dingin"
+          }
+        }
+      },
+      "Supplier": {
+        "type": "object",
+        "properties": {
+          "supplier_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "supplier_name": {
+            "type": "string",
+            "example": "PT. Sinar Jaya"
+          },
+          "phone_number": {
+            "type": "string",
+            "example": "08123456789"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "sales@sinarjaya.com"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "product_name": {
+            "type": "string",
+            "example": "Kopi Susu Botol"
+          },
+          "purchase_price": {
+            "type": "number",
+            "format": "double",
+            "example": 15000.00
+          },
+          "selling_price": {
+            "type": "number",
+            "format": "double",
+            "example": 20000.00
+          },
+          "stock_quantity": {
+            "type": "integer",
+            "example": 100
+          },
+          "category_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "supplier_id": {
+            "type": "string",
+            "format": "ulid"
+          }
+        }
+      },
+      "LoginInput": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        }
+      },
+      "UserInput": {
+        "type": "object",
+        "required": [
+          "username",
+          "password",
+          "role_id"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          },
+          "role_id": {
+            "type": "integer",
+            "description": "ID dari tabel Roles (misal: 1 untuk admin, 2 untuk kasir)",
+            "example": 2
+          }
+        }
+      },
+      "CategoryInput": {
+        "type": "object",
+        "required": [
+          "category_name"
+        ],
+        "properties": {
+          "category_name": {
+            "type": "string"
+          }
+        }
+      },
+      "SupplierInput": {
+        "type": "object",
+        "required": [
+          "supplier_name"
+        ],
+        "properties": {
+          "supplier_name": {
+            "type": "string"
+          },
+          "phone_number": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "ProductInput": {
+        "type": "object",
+        "required": [
+          "product_name",
+          "purchase_price",
+          "selling_price",
+          "stock_quantity",
+          "category_id",
+          "supplier_id"
+        ],
+        "properties": {
+          "product_name": {
+            "type": "string"
+          },
+          "purchase_price": {
+            "type": "number",
+            "format": "double"
+          },
+          "selling_price": {
+            "type": "number",
+            "format": "double"
+          },
+          "stock_quantity": {
+            "type": "integer"
+          },
+          "category_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "supplier_id": {
+            "type": "string",
+            "format": "ulid"
+          }
+        }
+      },
+      "ProductUpdateInput": {
+        "type": "object",
+        "required": [
+          "product_name",
+          "purchase_price",
+          "selling_price",
+          "category_id",
+          "supplier_id"
+        ],
+        "properties": {
+          "product_name": {
+            "type": "string"
+          },
+          "purchase_price": {
+            "type": "number",
+            "format": "double"
+          },
+          "selling_price": {
+            "type": "number",
+            "format": "double"
+          },
+          "category_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "supplier_id": {
+            "type": "string",
+            "format": "ulid"
+          }
+        }
+      },
+      "InventoryAdjustInput": {
+        "type": "object",
+        "required": [
+          "product_id",
+          "user_id",
+          "change_quantity",
+          "reason"
+        ],
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "change_quantity": {
+            "type": "integer",
+            "description": "Jumlah yang ditambahkan (positif) atau dikurangkan (negatif).",
+            "example": 50
+          },
+          "reason": {
+            "type": "string",
+            "example": "Stock Opname"
+          }
+        }
+      },
+      "InventoryLogResponse": {
+        "type": "object",
+        "properties": {
+          "log_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "change_quantity": {
+            "type": "integer",
+            "example": 50
+          },
+          "reason": {
+            "type": "string",
+            "example": "Stock Opname"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TransactionInput": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "product_id",
+                "quantity"
+              ],
+              "properties": {
+                "product_id": {
+                  "type": "string",
+                  "format": "ulid"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        }
+      },
+      "TransactionItemResponse": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01KAJG05CEXYCHEZBEPJZ53E83"
+          },
+          "product_name": {
+            "type": "string",
+            "example": "Bakpia Kacang Hijau ORI"
+          },
+          "quantity": {
+            "type": "integer",
+            "example": 1
+          },
+          "price": {
+            "type": "string",
+            "example": "25000"
+          },
+          "sub_total": {
+            "type": "string",
+            "example": "25000"
+          }
+        }
+      },
+      "TransactionDetailResponseData": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01KAJG5WNG9XSWBJ5B078X7TRK"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01KAACH104W84VYDWHMCA21Z9Y"
+          },
+          "total_amount": {
+            "type": "string",
+            "example": "25000"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-11-21T13:03:45.2002639+07:00"
+          },
+          "items": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/TransactionItemResponse"
+            }
+          }
+        }
+      },
+      "TransactionResponseData": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01KAJG5WNG9XSWBJ5B078X7TRK"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01KAACH104W84VYDWHMCA21Z9Y"
+          },
+          "total_amount": {
+            "type": "string",
+            "example": "25000"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-11-21T13:03:45.2002639+07:00"
+          },
+          "items": {
+            "type": "string",
+            "example":"null"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "Authentication error. Token tidak valid atau tidak ada.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "Token otorisasi tidak ditemukan."
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Akses ditolak. Pengguna tidak memiliki hak (misal: Kasir mencoba akses Admin).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "Akses ditolak. Memerlukan hak Admin."
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "Resource tidak ditemukan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "Data tidak ditemukan."
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
