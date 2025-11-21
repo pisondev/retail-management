@@ -2,12 +2,9 @@ package service
 
 import (
 	"context"
-	"crypto/rand"
-	"database/sql"
-	"retail-management/helper"
-	"retail-management/model/domain"
+	"fmt"
 	"retail-management/model/web"
-	"retail-management/repository"
+	"retail-management/pb"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -16,20 +13,16 @@ import (
 )
 
 type InventoryLogServiceImpl struct {
-	InventoryLogRepository repository.InventoryLogRepository
-	ProductRepository      repository.ProductRepository
-	DB                     *sql.DB
-	Validate               *validator.Validate
-	Logger                 *logrus.Logger
+	InventoryClient pb.InventoryServiceClient
+	Validate        *validator.Validate
+	Logger          *logrus.Logger
 }
 
-func NewInventoryLogService(inventoryLogRepository repository.InventoryLogRepository, productRepository repository.ProductRepository, db *sql.DB, validate *validator.Validate, logger *logrus.Logger) InventoryLogService {
+func NewInventoryLogService(inventoryClient pb.InventoryServiceClient, validate *validator.Validate, logger *logrus.Logger) InventoryLogService {
 	return &InventoryLogServiceImpl{
-		InventoryLogRepository: inventoryLogRepository,
-		ProductRepository:      productRepository,
-		DB:                     db,
-		Validate:               validate,
-		Logger:                 logger,
+		InventoryClient: inventoryClient,
+		Validate:        validate,
+		Logger:          logger,
 	}
 }
 
@@ -41,53 +34,43 @@ func (service *InventoryLogServiceImpl) Adjust(ctx context.Context, req web.Inve
 		return web.InventoryLogResponse{}, err
 	}
 
-	service.Logger.Info("-trying to begin tx...")
-	tx, err := service.DB.Begin()
+	var reason string
+	if req.Reason != nil {
+		reason = *req.Reason
+	} else {
+		reason = "-"
+	}
+
+	service.Logger.Info("-forwarding adjust request to microservice...")
+
+	resp, err := service.InventoryClient.AdjustStock(ctx, &pb.AdjustStockRequest{
+		ProductId:      req.ProductID.String(),
+		QuantityChange: int32(req.ChangeQuantity),
+		Reason:         reason,
+		UserId:         req.UserID.String(),
+	})
+
 	if err != nil {
+		service.Logger.Errorf("-grpc call failed: %v", err)
 		return web.InventoryLogResponse{}, err
 	}
 
-	_, err = service.ProductRepository.UpdateStock(ctx, tx, req.ProductID, req.ChangeQuantity)
+	if !resp.Success {
+		return web.InventoryLogResponse{}, fmt.Errorf("error: %v", resp.Message)
+	}
+
+	realLogID, err := ulid.Parse(resp.LogId)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			return web.InventoryLogResponse{}, errRollback
-		}
-		service.Logger.Errorf("-failed to execute it: %v", err)
+		service.Logger.Warnf("failed to parse returned log id: %v", err)
 		return web.InventoryLogResponse{}, err
 	}
 
-	service.Logger.Info("-implementing ulid for logID")
-	t := time.Now()
-	entropy := ulid.Monotonic(rand.Reader, 0)
-	logID := ulid.MustNew(ulid.Timestamp(t), entropy)
-
-	inventoryLog := domain.InventoryLog{
-		LogID:          logID,
+	return web.InventoryLogResponse{
+		LogID:          realLogID,
 		ProductID:      req.ProductID,
 		UserID:         req.UserID,
 		ChangeQuantity: req.ChangeQuantity,
 		Reason:         req.Reason,
-	}
-
-	service.Logger.Info("-executing InventoryLogRepository.Create...")
-	createdInventoryLog, err := service.InventoryLogRepository.Create(ctx, tx, inventoryLog)
-	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			return web.InventoryLogResponse{}, errRollback
-		}
-		service.Logger.Errorf("-failed to execute it: %v", err)
-		return web.InventoryLogResponse{}, err
-	}
-
-	createdInventoryLog.CreatedAt = createdInventoryLog.CreatedAt.UTC().Truncate(time.Second)
-
-	service.Logger.Info("-trying to commit tx...")
-	errCommit := tx.Commit()
-	if errCommit != nil {
-		return web.InventoryLogResponse{}, errCommit
-	}
-
-	return helper.ToInventoryLogResponse(createdInventoryLog), nil
+		CreatedAt:      time.Now(),
+	}, nil
 }

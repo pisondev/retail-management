@@ -7,6 +7,7 @@ import (
 	"retail-management/helper"
 	"retail-management/model/domain"
 	"retail-management/model/web"
+	"retail-management/pb"
 	"retail-management/repository"
 	"time"
 
@@ -17,14 +18,16 @@ import (
 
 type ProductServiceImpl struct {
 	ProductRepository repository.ProductRepository
+	InventoryClient   pb.InventoryServiceClient
 	DB                *sql.DB
 	Validate          *validator.Validate
 	Logger            *logrus.Logger
 }
 
-func NewProductService(productRepository repository.ProductRepository, db *sql.DB, validate *validator.Validate, logger *logrus.Logger) ProductService {
+func NewProductService(productRepository repository.ProductRepository, inventoryClient pb.InventoryServiceClient, db *sql.DB, validate *validator.Validate, logger *logrus.Logger) ProductService {
 	return &ProductServiceImpl{
 		ProductRepository: productRepository,
+		InventoryClient:   inventoryClient,
 		DB:                db,
 		Validate:          validate,
 		Logger:            logger,
@@ -69,6 +72,20 @@ func (service *ProductServiceImpl) Create(ctx context.Context, req web.ProductRe
 		return web.ProductResponse{}, err
 	}
 
+	service.Logger.Info("-syncing to inventory microservice...")
+	_, errGrpc := service.InventoryClient.AdjustStock(ctx, &pb.AdjustStockRequest{
+		ProductId:      product.ProductID.String(),
+		QuantityChange: int32(req.StockQuantity),
+		Reason:         "init stock from monolith",
+		UserId:         "admin",
+	})
+
+	if errGrpc != nil {
+		tx.Rollback()
+		service.Logger.Errorf("-failed to sync inventory: %v", errGrpc)
+		return web.ProductResponse{}, errGrpc
+	}
+
 	service.Logger.Info("-trying to commit tx...")
 	errCommit := tx.Commit()
 	if errCommit != nil {
@@ -95,6 +112,37 @@ func (service *ProductServiceImpl) FindAll(ctx context.Context) ([]web.ProductRe
 		service.Logger.Errorf("-failed to execute it: %v", err)
 		return []web.ProductResponse{}, err
 	}
+
+	if len(selectedProducts) == 0 {
+		return []web.ProductResponse{}, nil
+	}
+
+	var productIDs []string
+	for _, p := range selectedProducts {
+		productIDs = append(productIDs, p.ProductID.String())
+	}
+
+	service.Logger.Info("-fetching batch stock from microservice...")
+	batchResp, errGrpc := service.InventoryClient.GetBatchStock(ctx, &pb.GetBatchStockRequest{
+		ProductIds: productIDs,
+	})
+
+	stockMap := make(map[string]int)
+	if errGrpc != nil {
+
+		service.Logger.Warnf("-failed to fetch batch stock: %v", errGrpc)
+	} else {
+		for _, item := range batchResp.Items {
+			stockMap[item.ProductId] = int(item.Quantity)
+		}
+	}
+
+	for i := range selectedProducts {
+		pid := selectedProducts[i].ProductID.String()
+		selectedProducts[i].StockQuantity = stockMap[pid]
+	}
+
+	service.Logger.Info("successfully fetched all products with live stock")
 
 	service.Logger.Info("-trying to commit tx...")
 	errCommit := tx.Commit()
@@ -123,6 +171,20 @@ func (service *ProductServiceImpl) FindByID(ctx context.Context, productID ulid.
 		service.Logger.Errorf("-failed to execute it: %v", err)
 		return web.ProductResponse{}, err
 	}
+
+	service.Logger.Info("-fetching live stock from microservice...")
+	stockResp, errGrpc := service.InventoryClient.GetStock(ctx, &pb.GetStockRequest{
+		ProductId: selectedProduct.ProductID.String(),
+	})
+
+	realStock := 0
+	if errGrpc != nil {
+		service.Logger.Warnf("-failed to fetch stock from microservice: %v", errGrpc)
+	} else {
+		realStock = int(stockResp.Quantity)
+	}
+	selectedProduct.StockQuantity = realStock
+	service.Logger.Info("successfully fetched product with live stock")
 
 	service.Logger.Info("-trying to commit tx...")
 	errCommit := tx.Commit()

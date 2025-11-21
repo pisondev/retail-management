@@ -9,6 +9,7 @@ import (
 	"retail-management/helper"
 	"retail-management/model/domain"
 	"retail-management/model/web"
+	"retail-management/pb"
 	"retail-management/repository"
 	"time"
 
@@ -21,15 +22,17 @@ import (
 type TransactionServiceImpl struct {
 	TransactionRepository repository.TransactionRepository
 	ProductRepository     repository.ProductRepository
+	InventoryClient       pb.InventoryServiceClient
 	DB                    *sql.DB
 	Validate              *validator.Validate
 	Logger                *logrus.Logger
 }
 
-func NewTransactionService(transactionRepository repository.TransactionRepository, productRepository repository.ProductRepository, db *sql.DB, validate *validator.Validate, logger *logrus.Logger) TransactionService {
+func NewTransactionService(transactionRepository repository.TransactionRepository, productRepository repository.ProductRepository, inventoryClient pb.InventoryServiceClient, db *sql.DB, validate *validator.Validate, logger *logrus.Logger) TransactionService {
 	return &TransactionServiceImpl{
 		TransactionRepository: transactionRepository,
 		ProductRepository:     productRepository,
+		InventoryClient:       inventoryClient,
 		DB:                    db,
 		Validate:              validate,
 		Logger:                logger,
@@ -55,27 +58,22 @@ func (service *TransactionServiceImpl) Create(ctx context.Context, req web.Trans
 	var detailsResponse []web.TransactionItemResp
 	totalAmount := decimal.Zero
 
+	var grpcItems []*pb.Item
+
 	for _, itemReq := range req.Items {
 		product, err := service.ProductRepository.FindByID(ctx, tx, itemReq.ProductID)
 		if err != nil {
-			service.Logger.Errorf("-product not found/error: %v", err)
+			service.Logger.Errorf("-product not found: %v", err)
 			return web.TransactionResponse{}, exception.ErrNotFound
-		}
-
-		if product.StockQuantity < itemReq.Quantity {
-			return web.TransactionResponse{}, fmt.Errorf("product %s: %v", product.ProductName, exception.ErrInsufficientStock)
 		}
 
 		currentPrice := product.SellingPrice
 		qtyDecimal := decimal.NewFromInt(int64(itemReq.Quantity))
 		subTotal := currentPrice.Mul(qtyDecimal)
-
 		totalAmount = totalAmount.Add(subTotal)
 
-		detailID := ulid.MustNew(timestamp, monotonicEntropy)
-
 		detailsDomain = append(detailsDomain, domain.TransactionDetail{
-			DetailID:      detailID,
+			DetailID:      ulid.MustNew(timestamp, monotonicEntropy),
 			TransactionID: transactionID,
 			ProductID:     product.ProductID,
 			Quantity:      itemReq.Quantity,
@@ -90,12 +88,27 @@ func (service *TransactionServiceImpl) Create(ctx context.Context, req web.Trans
 			SubTotal:    subTotal,
 		})
 
-		changeQuantity := -1 * itemReq.Quantity
-		_, err = service.ProductRepository.UpdateStock(ctx, tx, product.ProductID, changeQuantity)
-		if err != nil {
-			service.Logger.Errorf("-failed update stock: %v", err)
-			return web.TransactionResponse{}, err
-		}
+		grpcItems = append(grpcItems, &pb.Item{
+			ProductId: itemReq.ProductID.String(),
+			Quantity:  int32(itemReq.Quantity),
+		})
+	}
+
+	service.Logger.Info("-calling inventory microservice to decrease stock...")
+	decreaseResp, err := service.InventoryClient.DecreaseStock(ctx, &pb.DecreaseStockRequest{
+		Items:         grpcItems,
+		UserId:        req.UserID.String(),
+		TransactionId: transactionID.String(),
+	})
+
+	if err != nil {
+		service.Logger.Errorf("-grpc call failed: %v", err)
+		return web.TransactionResponse{}, fmt.Errorf("inventory service unavailable")
+	}
+
+	if !decreaseResp.Success {
+		service.Logger.Warnf("-inventory rejected: %s", decreaseResp.Message)
+		return web.TransactionResponse{}, fmt.Errorf("error: %v", decreaseResp.Message)
 	}
 
 	transactionHeader := domain.Transaction{
@@ -106,18 +119,35 @@ func (service *TransactionServiceImpl) Create(ctx context.Context, req web.Trans
 
 	_, err = service.TransactionRepository.Save(ctx, tx, transactionHeader)
 	if err != nil {
-		service.Logger.Errorf("-failed save header: %v", err)
+		service.Logger.Errorf("-stock decreased but save process failed, reverting stock...")
+		for _, item := range grpcItems {
+			service.InventoryClient.AdjustStock(ctx, &pb.AdjustStockRequest{
+				ProductId:      item.ProductId,
+				QuantityChange: item.Quantity,
+				Reason:         fmt.Sprintf("rollback tx: %s", transactionID.String()),
+				UserId:         req.UserID.String(),
+			})
+		}
 		return web.TransactionResponse{}, err
 	}
 
 	_, err = service.TransactionRepository.SaveDetails(ctx, tx, detailsDomain)
 	if err != nil {
-		service.Logger.Errorf("-failed save details: %v", err)
+		service.Logger.Errorf("-CRITICAL: Save Details failed! Reverting stock...")
+		for _, item := range grpcItems {
+			service.InventoryClient.AdjustStock(ctx, &pb.AdjustStockRequest{
+				ProductId:      item.ProductId,
+				QuantityChange: item.Quantity,
+				Reason:         fmt.Sprintf("Rollback TX: %s", transactionID.String()),
+				UserId:         req.UserID.String(),
+			})
+		}
 		return web.TransactionResponse{}, err
 	}
 
 	service.Logger.Info("-trying to commit tx...")
-	if err = tx.Commit(); err != nil {
+	errCommit := tx.Commit()
+	if errCommit != nil {
 		service.Logger.Errorf("-failed commit: %v", err)
 		return web.TransactionResponse{}, err
 	}

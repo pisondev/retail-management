@@ -30,6 +30,9 @@ func main() {
 	db := app.NewDB()
 	validate := validator.New()
 
+	inventoryClient, grpcConn := app.NewInventoryClient(logger)
+	defer grpcConn.Close()
+
 	userRepository := repository.NewUserRepository(logger)
 	userService := service.NewUserService(userRepository, db, validate, logger)
 	userController := controller.NewUserController(userService, logger)
@@ -47,15 +50,15 @@ func main() {
 	supplierController := controller.NewSupplierController(supplierService, logger)
 
 	productRepository := repository.NewProductRepository(logger)
-	productService := service.NewProductService(productRepository, db, validate, logger)
+	productService := service.NewProductService(productRepository, inventoryClient, db, validate, logger)
 	productController := controller.NewProductController(productService, logger)
 
-	inventoryLogRepository := repository.NewInventoryLogRepository(logger)
-	inventoryLogService := service.NewInventoryLogService(inventoryLogRepository, productRepository, db, validate, logger)
+	// inventoryLogRepository := repository.NewInventoryLogRepository(logger)
+	inventoryLogService := service.NewInventoryLogService(inventoryClient, validate, logger)
 	inventoryLogController := controller.NewInventoryLogController(inventoryLogService, logger)
 
 	transactionRepository := repository.NewTransactionRepository(logger)
-	transactionService := service.NewTransactionService(transactionRepository, productRepository, db, validate, logger)
+	transactionService := service.NewTransactionService(transactionRepository, productRepository, inventoryClient, db, validate, logger)
 	transactionController := controller.NewTransactionController(transactionService, logger)
 
 	server := fiber.New(fiber.Config{
