@@ -195,7 +195,7 @@
           }
         }
       },
-      "put": {
+      "patch": {
         "tags": [
           "2. User Management"
         ],
@@ -537,7 +537,7 @@
           }
         }
       ],
-      "put": {
+      "patch": {
         "tags": [
           "4. Suppliers"
         ],
@@ -721,7 +721,7 @@
           }
         }
       },
-      "put": {
+      "patch": {
         "tags": [
           "5. Products"
         ],
