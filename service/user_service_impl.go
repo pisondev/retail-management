@@ -147,6 +147,7 @@ func (service *UserServiceImpl) Register(ctx context.Context, req web.UserAuthRe
 	if err != nil {
 		return web.UserRegisterResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Infof("-executing repository.FindByUsername...")
 	_, err = service.UserRepository.FindByUsername(ctx, tx, req.Username)
@@ -201,6 +202,18 @@ func (service *UserServiceImpl) Register(ctx context.Context, req web.UserAuthRe
 		return web.UserRegisterResponse{}, err
 	}
 
+	targetRole := "cashier"
+	if req.Role != "" {
+		targetRole = req.Role
+	}
+
+	service.Logger.Infof("-executing repository.AssignRole (%s)...", targetRole)
+	err = service.UserRepository.AssignRole(ctx, tx, savedUser.UserID, targetRole)
+	if err != nil {
+		service.Logger.Errorf("failed to execute r.AssignRole: %v", err)
+		return web.UserRegisterResponse{}, err
+	}
+
 	service.Logger.Infof("-trying to commit tx...")
 	errCommit := tx.Commit()
 	if errCommit != nil {
@@ -210,7 +223,10 @@ func (service *UserServiceImpl) Register(ctx context.Context, req web.UserAuthRe
 
 	service.Logger.Infof("-successfully commit tx!")
 
-	return helper.ToUserRegisterResponse(savedUser), nil
+	savedUserResponse := helper.ToUserRegisterResponse(savedUser)
+	savedUserResponse.Role = targetRole
+
+	return savedUserResponse, nil
 }
 
 func (service *UserServiceImpl) FindAll(ctx context.Context) ([]web.UserResponse, error) {
@@ -253,68 +269,48 @@ func (service *UserServiceImpl) Update(ctx context.Context, req web.UserUpdateRe
 	if err != nil {
 		return web.UserResponse{}, err
 	}
+	defer tx.Rollback()
 
-	service.Logger.Info("-trying to execute r.FindByID...")
 	selectedUser, err := service.UserRepository.FindByID(ctx, tx, req.UserID)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			return web.UserResponse{}, errRollback
-		}
 		if err == sql.ErrNoRows || errors.Is(err, exception.ErrNotFound) {
-			service.Logger.Warn("-user with specific user_id doesn't exists")
 			return web.UserResponse{}, exception.ErrNotFound
 		}
-		service.Logger.Errorf("-failed to execute r.FindByID: %v", err)
 		return web.UserResponse{}, err
 	}
 
-	service.Logger.Infof("-found a user with username: %v", selectedUser.Username)
-
 	if req.Username != nil {
-		if req.Username != nil {
-			service.Logger.Info("-found a requested username...")
-			selectedUser.Username = *req.Username
-		}
-
-		service.Logger.Info("-trying to execute r.Update...")
-		updatedUser, err := service.UserRepository.Update(ctx, tx, selectedUser)
+		selectedUser.Username = *req.Username
+		_, err := service.UserRepository.Update(ctx, tx, selectedUser)
 		if err != nil {
-			service.Logger.Errorf("-failed to update a user: %v", err)
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				return web.UserResponse{}, errRollback
-			}
+			service.Logger.Errorf("-failed to update user info: %v", err)
 			return web.UserResponse{}, err
 		}
+	}
 
-		service.Logger.Info("-trying to commit tx...")
-		errCommit := tx.Commit()
-		if errCommit != nil {
-			return web.UserResponse{}, errCommit
+	if req.Role != nil {
+		service.Logger.Infof("-updating role to %s...", *req.Role)
+		err := service.UserRepository.UpdateRole(ctx, tx, selectedUser.UserID, *req.Role)
+		if err != nil {
+			service.Logger.Errorf("-failed to update user role: %v", err)
+			return web.UserResponse{}, err
 		}
-
-		service.Logger.Info("-successfully commit tx, returning back to controller...")
-
-		return web.UserResponse{
-			UserID:   updatedUser.UserID,
-			Username: updatedUser.Username,
-			Role:     updatedUser.Role,
-		}, nil
 	}
 
 	service.Logger.Info("-trying to commit tx...")
-	errCommit := tx.Commit()
-	if errCommit != nil {
-		return web.UserResponse{}, errCommit
+	if err = tx.Commit(); err != nil {
+		return web.UserResponse{}, err
 	}
 
-	service.Logger.Info("-successfully commit tx, returning back to controller...")
+	finalRole := selectedUser.Role
+	if req.Role != nil {
+		finalRole = *req.Role
+	}
 
 	return web.UserResponse{
 		UserID:   selectedUser.UserID,
 		Username: selectedUser.Username,
-		Role:     selectedUser.Role,
+		Role:     finalRole,
 	}, nil
 }
 

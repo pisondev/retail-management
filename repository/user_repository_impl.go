@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"retail-management/exception"
 	"retail-management/model/domain"
 
@@ -68,7 +69,6 @@ func (repository *UserRepositoryImpl) FindByID(ctx context.Context, tx *sql.Tx, 
 }
 
 func (repository *UserRepositoryImpl) FindByUsername(ctx context.Context, tx *sql.Tx, username string) (domain.User, error) {
-	// Method ini sudah BENAR (sudah ada JOIN)
 	SQL := `
         SELECT 
             u.user_id, 
@@ -93,7 +93,7 @@ func (repository *UserRepositoryImpl) FindByUsername(ctx context.Context, tx *sq
 	if err != nil {
 		if err == sql.ErrNoRows {
 			repository.Logger.Warnf("---cannot found username: %v", username)
-			return domain.User{}, exception.ErrUnauthorizedLogin // Gunakan error spesifik untuk login
+			return domain.User{}, exception.ErrUnauthorizedLogin
 		} else {
 			repository.Logger.Errorf("---failed to scan row: %v", err)
 			return domain.User{}, err
@@ -174,6 +174,45 @@ func (repository *UserRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, us
 	if rowsAffected == 0 {
 		repository.Logger.Warnf("---failed to delete, user not found: %v", userID)
 		return exception.ErrNotFound
+	}
+
+	return nil
+}
+
+func (repository *UserRepositoryImpl) AssignRole(ctx context.Context, tx *sql.Tx, userID ulid.ULID, roleName string) error {
+	SQL := `INSERT INTO User_Roles (user_id, role_id) 
+            SELECT ?, role_id FROM Roles WHERE role_name = ?`
+
+	repository.Logger.Infof("---executing sql (assign role '%s')...", roleName)
+	result, err := tx.ExecContext(ctx, SQL, userID, roleName)
+	if err != nil {
+		repository.Logger.Errorf("---failed to assign role: %v", err)
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return errors.New("role not found")
+	}
+
+	return nil
+}
+
+func (repository *UserRepositoryImpl) UpdateRole(ctx context.Context, tx *sql.Tx, userID ulid.ULID, roleName string) error {
+	SQL := `UPDATE User_Roles 
+            SET role_id = (SELECT role_id FROM Roles WHERE role_name = ?) 
+            WHERE user_id = ?`
+
+	repository.Logger.Infof("---executing sql (update role to '%s')...", roleName)
+	result, err := tx.ExecContext(ctx, SQL, roleName, userID)
+	if err != nil {
+		repository.Logger.Errorf("---failed to update user role: %v", err)
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return repository.AssignRole(ctx, tx, userID, roleName)
 	}
 
 	return nil

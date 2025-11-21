@@ -15,4 +15,6 @@ type UserRepository interface {
 	FindAll(ctx context.Context, tx *sql.Tx) ([]domain.User, error)
 	Update(ctx context.Context, tx *sql.Tx, user domain.User) (domain.User, error)
 	Delete(ctx context.Context, tx *sql.Tx, userID ulid.ULID) error
+	AssignRole(ctx context.Context, tx *sql.Tx, userID ulid.ULID, roleName string) error
+	UpdateRole(ctx context.Context, tx *sql.Tx, userID ulid.ULID, roleName string) error
 }
