@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Small Business Inventory and Sales System API",
-    "description": "Dokumentasi API untuk Proyek Basis Data Sistem Inventaris dan Penjualan UMKM. Dibuat berdasarkan proposal dan skema SQL yang disediakan.",
+    "description": "API Documentation for Small Business Inventory and Sales System API Project.",
     "version": "1.0.0"
   },
   "servers": [
@@ -815,11 +815,11 @@
         },
         "responses": {
           "200": {
-            "description": "Stok berhasil disesuaikan.",
+            "description": "Stok berhasil disesuaikan dan log dibuat.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Product"
+                  "$ref": "#/components/schemas/InventoryLogResponse"
                 }
               }
             }
@@ -864,7 +864,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransactionFull"
+                  "$ref": "#/components/schemas/TransactionDetailResponseData"
                 }
               }
             }
@@ -885,7 +885,7 @@
           "7. Transactions"
         ],
         "summary": "Dapatkan Riwayat Transaksi",
-        "description": "Admin melihat semua, Kasir hanya melihat transaksi yang mereka lakukan.",
+        "description": "Admin melihat semua, Kasir hanya melihat transaksi yang mereka lakukan. Output dibungkus dalam format code/status/data.",
         "security": [
           {
             "bearerAuth": []
@@ -897,9 +897,16 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Transaction"
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "status": { "type": "string", "example": "OK" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TransactionResponseData"
+                      }
+                    }
                   }
                 }
               }
@@ -928,7 +935,7 @@
           "7. Transactions"
         ],
         "summary": "Dapatkan Detail Transaksi by ID",
-        "description": "Mendapatkan detail lengkap transaksi, termasuk item-itemnya.",
+        "description": "Mendapatkan detail lengkap transaksi, termasuk item-itemnya. Output dibungkus dalam format code/status/data.",
         "security": [
           {
             "bearerAuth": []
@@ -940,7 +947,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransactionFull"
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "status": { "type": "string", "example": "OK" },
+                    "data": {
+                      "$ref": "#/components/schemas/TransactionDetailResponseData"
+                    }
+                  }
                 }
               }
             }
@@ -983,7 +997,11 @@
           },
           "username": {
             "type": "string",
-            "example": "admin_toko"
+            "example": "admin"
+          },
+          "role": {
+            "type": "string",
+            "example": "admin"
           }
         }
       },
@@ -1054,65 +1072,6 @@
           "supplier_id": {
             "type": "string",
             "format": "ulid"
-          }
-        }
-      },
-      "Transaction": {
-        "type": "object",
-        "properties": {
-          "transaction_id": {
-            "type": "string",
-            "format": "ulid"
-          },
-          "transaction_time": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "ulid"
-          }
-        }
-      },
-      "TransactionDetail": {
-        "type": "object",
-        "properties": {
-          "detail_id": {
-            "type": "string",
-            "format": "ulid"
-          },
-          "transaction_id": {
-            "type": "string",
-            "format": "ulid"
-          },
-          "product_id": {
-            "type": "string",
-            "format": "ulid"
-          },
-          "quantity": {
-            "type": "integer",
-            "example": 2
-          },
-          "price": {
-            "type": "number",
-            "format": "double",
-            "description": "Harga jual produk pada saat transaksi",
-            "example": 20000.00
-          }
-        }
-      },
-      "TransactionFull": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Transaction"
-          }
-        ],
-        "properties": {
-          "details": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TransactionDetail"
-            }
           }
         }
       },
@@ -1261,18 +1220,57 @@
       "InventoryAdjustInput": {
         "type": "object",
         "required": [
-          "productId",
-          "quantity"
+          "product_id",
+          "user_id",
+          "change_quantity",
+          "reason"
         ],
         "properties": {
-          "productId": {
+          "product_id": {
             "type": "string",
             "format": "ulid"
           },
-          "quantity": {
+          "user_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "change_quantity": {
             "type": "integer",
             "description": "Jumlah yang ditambahkan (positif) atau dikurangkan (negatif).",
             "example": 50
+          },
+          "reason": {
+            "type": "string",
+            "example": "Stock Opname"
+          }
+        }
+      },
+      "InventoryLogResponse": {
+        "type": "object",
+        "properties": {
+          "log_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "ulid"
+          },
+          "change_quantity": {
+            "type": "integer",
+            "example": 50
+          },
+          "reason": {
+            "type": "string",
+            "example": "Stock Opname"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -1284,11 +1282,11 @@
             "items": {
               "type": "object",
               "required": [
-                "productId",
+                "product_id",
                 "quantity"
               ],
               "properties": {
-                "productId": {
+                "product_id": {
                   "type": "string",
                   "format": "ulid"
                 },
@@ -1298,6 +1296,91 @@
                 }
               }
             }
+          }
+        }
+      },
+      "TransactionItemResponse": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01KAJG05CEXYCHEZBEPJZ53E83"
+          },
+          "product_name": {
+            "type": "string",
+            "example": "Bakpia Kacang Hijau ORI"
+          },
+          "quantity": {
+            "type": "integer",
+            "example": 1
+          },
+          "price": {
+            "type": "string",
+            "example": "25000"
+          },
+          "sub_total": {
+            "type": "string",
+            "example": "25000"
+          }
+        }
+      },
+      "TransactionDetailResponseData": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01KAJG5WNG9XSWBJ5B078X7TRK"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01KAACH104W84VYDWHMCA21Z9Y"
+          },
+          "total_amount": {
+            "type": "string",
+            "example": "25000"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-11-21T13:03:45.2002639+07:00"
+          },
+          "items": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/TransactionItemResponse"
+            }
+          }
+        }
+      },
+      "TransactionResponseData": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01KAJG5WNG9XSWBJ5B078X7TRK"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "ulid",
+            "example": "01KAACH104W84VYDWHMCA21Z9Y"
+          },
+          "total_amount": {
+            "type": "string",
+            "example": "25000"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-11-21T13:03:45.2002639+07:00"
+          },
+          "items": {
+            "type": "string",
+            "example":"null"
           }
         }
       },
