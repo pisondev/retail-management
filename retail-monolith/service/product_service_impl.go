@@ -47,6 +47,7 @@ func (service *ProductServiceImpl) Create(ctx context.Context, req web.ProductRe
 	if err != nil {
 		return web.ProductResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-implementing ulid...")
 	entropy := ulid.Monotonic(rand.Reader, 0)
@@ -101,6 +102,7 @@ func (service *ProductServiceImpl) FindAll(ctx context.Context) ([]web.ProductRe
 	if err != nil {
 		return []web.ProductResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-executing ProductRepository.FindAll()...")
 	selectedProducts, err := service.ProductRepository.FindAll(ctx, tx)
@@ -160,6 +162,7 @@ func (service *ProductServiceImpl) FindByID(ctx context.Context, productID ulid.
 	if err != nil {
 		return web.ProductResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-executing ProductRepository.FindByID()...")
 	selectedProduct, err := service.ProductRepository.FindByID(ctx, tx, productID)
@@ -209,6 +212,7 @@ func (service *ProductServiceImpl) Update(ctx context.Context, req web.ProductUp
 	if err != nil {
 		return web.ProductUpdateResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-executing ProductRepository.FindByID()...")
 	selectedProduct, err := service.ProductRepository.FindByID(ctx, tx, req.ProductID)
@@ -280,6 +284,7 @@ func (service *ProductServiceImpl) UpdateStock(ctx context.Context, req web.Prod
 	if err != nil {
 		return web.ProductUpdateResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-executing ProductRepository.FindByID()...")
 	_, err = service.ProductRepository.FindByID(ctx, tx, req.ProductID)
@@ -318,6 +323,7 @@ func (service *ProductServiceImpl) Delete(ctx context.Context, ProductID ulid.UL
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-executing ProductRepository.Delete()...")
 	err = service.ProductRepository.Delete(ctx, tx, ProductID)

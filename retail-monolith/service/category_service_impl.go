@@ -45,6 +45,7 @@ func (service *CategoryServiceImpl) Create(ctx context.Context, req web.Category
 		service.Logger.Errorf("-failed to begin tx: %v", err)
 		return web.CategoryResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-implementing ulid...")
 	entropy := ulid.Monotonic(rand.Reader, 0)
@@ -83,6 +84,7 @@ func (service *CategoryServiceImpl) FindAll(ctx context.Context) ([]web.Category
 		service.Logger.Errorf("-failed to begin tx: %v", err)
 		return []web.CategoryResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-executing UserRepository.FindAll...")
 	selectedCategories, err := service.CategoryRepository.FindAll(ctx, tx)
@@ -118,6 +120,7 @@ func (service *CategoryServiceImpl) Update(ctx context.Context, req web.Category
 	if err != nil {
 		return web.CategoryResponse{}, err
 	}
+	defer tx.Rollback()
 
 	category := domain.Category{
 		CategoryID:   req.CategoryID,
@@ -151,6 +154,7 @@ func (service *CategoryServiceImpl) Delete(ctx context.Context, categoryID ulid.
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-executing CategoryRepository.Delete()...")
 	err = service.CategoryRepository.Delete(ctx, tx, categoryID)

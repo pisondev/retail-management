@@ -34,6 +34,7 @@ func (service *RoleServiceImpl) FindAll(ctx context.Context) ([]web.RoleResponse
 		service.Logger.Errorf("-failed to begin tx: %v", err)
 		return []web.RoleResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-executing RoleRepo.FindAll...")
 	roles, err := service.RoleRepository.FindAll(ctx, tx)

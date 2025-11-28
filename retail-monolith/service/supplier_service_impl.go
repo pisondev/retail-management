@@ -44,6 +44,7 @@ func (service *SupplierServiceImpl) Save(ctx context.Context, req web.SupplierRe
 	if err != nil {
 		return web.SupplierResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-implementing ulid...")
 	entropy := ulid.Monotonic(rand.Reader, 0)
@@ -81,6 +82,7 @@ func (service *SupplierServiceImpl) FindAll(ctx context.Context) ([]web.Supplier
 	if err != nil {
 		return []web.SupplierResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-executing SupplierRepository.FindAll()...")
 	selectedSuppliers, err := service.SupplierRepository.FindAll(ctx, tx)
@@ -116,6 +118,7 @@ func (service *SupplierServiceImpl) Update(ctx context.Context, req web.Supplier
 	if err != nil {
 		return web.SupplierResponse{}, err
 	}
+	defer tx.Rollback()
 
 	supplier := domain.Supplier{
 		SupplierID:   req.SupplierID,
@@ -150,6 +153,7 @@ func (service *SupplierServiceImpl) Delete(ctx context.Context, supplierID ulid.
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-executing SupplierRepository.Delete()...")
 	err = service.SupplierRepository.Delete(ctx, tx, supplierID)

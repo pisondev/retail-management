@@ -47,6 +47,7 @@ func (service *UserServiceImpl) Login(ctx context.Context, req web.UserAuthReque
 	if err != nil {
 		return web.UserLoginResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Infof("-executing repository.FindByUsername...")
 	foundUser, err := service.UserRepository.FindByUsername(ctx, tx, req.Username)
@@ -111,6 +112,7 @@ func (service *UserServiceImpl) FindByID(ctx context.Context, userID ulid.ULID) 
 	if err != nil {
 		return web.UserResponse{}, err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-trying to execute r.FindByID...")
 	foundUser, err := service.UserRepository.FindByID(ctx, tx, userID)
@@ -235,6 +237,7 @@ func (service *UserServiceImpl) FindAll(ctx context.Context) ([]web.UserResponse
 	if err != nil {
 		return []web.UserResponse{}, err
 	}
+	defer tx.Rollback()
 
 	foundUsers, err := service.UserRepository.FindAll(ctx, tx)
 	if err != nil {
@@ -340,6 +343,7 @@ func (service *UserServiceImpl) Delete(ctx context.Context, userID ulid.ULID) er
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
 	service.Logger.Info("-trying to execute r.Delete...")
 	err = service.UserRepository.Delete(ctx, tx, userID)
