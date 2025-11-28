@@ -1,1 +1,4 @@
 .env
+.vscode
+retail-monolith/retail-monolith
+inventory-service/inventory-service
