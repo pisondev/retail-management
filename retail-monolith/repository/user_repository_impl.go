@@ -143,10 +143,10 @@ func (repository *UserRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx) (
 }
 
 func (repository *UserRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, user domain.User) (domain.User, error) {
-	SQL := "UPDATE Users SET username = ? WHERE user_id = ?"
+	SQL := "UPDATE Users SET username = ?, hashed_password = ? WHERE user_id = ?"
 
 	repository.Logger.Info("---executing sql (update user)...")
-	_, err := tx.ExecContext(ctx, SQL, user.Username, user.UserID)
+	_, err := tx.ExecContext(ctx, SQL, user.Username, user.HashedPassword, user.UserID)
 	if err != nil {
 		repository.Logger.Errorf("---failed to update a user")
 		return domain.User{}, err
@@ -199,21 +199,14 @@ func (repository *UserRepositoryImpl) AssignRole(ctx context.Context, tx *sql.Tx
 }
 
 func (repository *UserRepositoryImpl) UpdateRole(ctx context.Context, tx *sql.Tx, userID ulid.ULID, roleName string) error {
-	SQL := `UPDATE User_Roles 
-            SET role_id = (SELECT role_id FROM Roles WHERE role_name = ?) 
-            WHERE user_id = ?`
+	deleteSQL := `DELETE FROM User_Roles WHERE user_id = ?`
 
-	repository.Logger.Infof("---executing sql (update role to '%s')...", roleName)
-	result, err := tx.ExecContext(ctx, SQL, roleName, userID)
+	repository.Logger.Infof("---clearing old role for user %s...", userID)
+	_, err := tx.ExecContext(ctx, deleteSQL, userID)
 	if err != nil {
-		repository.Logger.Errorf("---failed to update user role: %v", err)
+		repository.Logger.Errorf("---failed to delete old role: %v", err)
 		return err
 	}
-
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return repository.AssignRole(ctx, tx, userID, roleName)
-	}
-
-	return nil
+	repository.Logger.Infof("---assigning new role '%s'...", roleName)
+	return repository.AssignRole(ctx, tx, userID, roleName)
 }
