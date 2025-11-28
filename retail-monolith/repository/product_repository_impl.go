@@ -79,7 +79,7 @@ func (repository *ProductRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
 }
 
 func (repository *ProductRepositoryImpl) FindByID(ctx context.Context, tx *sql.Tx, ProductID ulid.ULID) (domain.Product, error) {
-	SQL := "SELECT product_id, product_name, purchase_price, selling_price, stock_quantity, category_id, product_id FROM Products WHERE product_id = ?"
+	SQL := "SELECT product_id, product_name, purchase_price, selling_price, stock_quantity, category_id, supplier_id FROM Products WHERE product_id = ?"
 
 	var product domain.Product
 
