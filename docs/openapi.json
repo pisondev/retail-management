@@ -7,8 +7,12 @@
   },
   "servers": [
     {
-      "url": "/api/v1",
-      "description": "Server Pengembangan"
+      "url": "http://localhost:3000",
+      "description": "Dev Local Server"
+    },
+    {
+      "url": "https://cenapik.shop/api/",
+      "description": "Production Server"
     }
   ],
   "paths": {

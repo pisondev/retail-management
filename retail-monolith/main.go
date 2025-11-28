@@ -25,7 +25,7 @@ func main() {
 	}
 
 	serverPort := os.Getenv("SERVER_PORT")
-	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
+	// allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
 
 	db := app.NewDB()
 	validate := validator.New()
@@ -66,10 +66,11 @@ func main() {
 	})
 
 	server.Use(cors.New(cors.Config{
-		AllowOrigins:     allowedOrigin,
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
-		AllowMethods:     "GET, POST, PUT, PATCH, DELETE",
-		AllowCredentials: true,
+		// AllowOrigins: allowedOrigin,
+		AllowOrigins: "*",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, x-api-key",
+		AllowMethods: "GET, POST, PUT, PATCH, DELETE",
+		// AllowCredentials: true,
 	}))
 
 	routeConfig := app.RouteConfig{
