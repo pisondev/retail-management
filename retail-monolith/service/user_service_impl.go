@@ -288,6 +288,26 @@ func (service *UserServiceImpl) Update(ctx context.Context, req web.UserUpdateRe
 		}
 	}
 
+	if req.Password != nil {
+		service.Logger.Infof("-trying to hash the password...")
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			service.Logger.Errorf("-failed to hash the password")
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				return web.UserResponse{}, errRollback
+			}
+			return web.UserResponse{}, err
+		}
+
+		selectedUser.HashedPassword = string(hashedPassword)
+		_, err = service.UserRepository.Update(ctx, tx, selectedUser)
+		if err != nil {
+			service.Logger.Errorf("-failed to update user info: %v", err)
+			return web.UserResponse{}, err
+		}
+	}
+
 	if req.Role != nil {
 		service.Logger.Infof("-updating role to %s...", *req.Role)
 		err := service.UserRepository.UpdateRole(ctx, tx, selectedUser.UserID, *req.Role)
